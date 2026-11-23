@@ -15,10 +15,13 @@ from homeassistant.components.light import (
 )
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from homeassistant.util.color import brightness_to_value, value_to_brightness
 
 from .const import LOGGER
 from .coordinator import IntellifireConfigEntry
 from .entity import IntellifireEntity
+
+BRIGHTNESS_SCALE = (1, 3)
 
 
 @dataclass(frozen=True)
@@ -57,7 +60,10 @@ class IntellifireLight(IntellifireEntity, LightEntity):
     @override
     def brightness(self) -> int:
         """Return the current brightness 0-255."""
-        return 85 * self.entity_description.value_fn(self.coordinator.read_api.data)
+        light_level = self.entity_description.value_fn(self.coordinator.read_api.data)
+        if light_level == 0:
+            return 0
+        return value_to_brightness(BRIGHTNESS_SCALE, light_level)
 
     @property
     @override
@@ -69,7 +75,9 @@ class IntellifireLight(IntellifireEntity, LightEntity):
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Instruct the light to turn on."""
         if ATTR_BRIGHTNESS in kwargs:
-            light_level = int(kwargs[ATTR_BRIGHTNESS] / 85)
+            light_level = round(
+                brightness_to_value(BRIGHTNESS_SCALE, kwargs[ATTR_BRIGHTNESS])
+            )
         else:
             light_level = 2
 
